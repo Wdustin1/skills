@@ -1,7 +1,7 @@
 ---
 name: echo-shield-token-triage
 description: Use when a Bankr or agent user gives a Base token contract and wants the Echo Shield card only. Return just the direct launch-card PNG URL; do not summarize, deep scan, trade, fetch binary image bytes, or execute transactions unless explicitly asked.
-version: 1.2.0
+version: 1.2.1
 author: BuiltByEcho
 license: MIT
 tags: [echo-shield, base, token-safety, launch-card, bankr, card-only]
@@ -28,11 +28,7 @@ For a valid address, respond with exactly one visible card line:
 Card: https://shield.builtbyecho.xyz/api/launch-card?address=<ADDRESS>&format=png
 ```
 
-If the host supports Markdown image previews and the user specifically asks to embed/display the image, use exactly:
-
-```md
-![Echo Shield card](https://shield.builtbyecho.xyz/api/launch-card?address=<ADDRESS>&format=png)
-```
+For Bankr and similar text terminals, always use the plain text `Card: <URL>` line. Do **not** use Markdown image syntax (`![alt](url)`) by default; some clients display a broken image icon or drop the URL when they cannot fetch/preview the image.
 
 Do not add score summaries, bullets, caveats, liquidity notes, holder notes, or buy/sell commentary unless the user explicitly asks for analysis after receiving the card.
 
