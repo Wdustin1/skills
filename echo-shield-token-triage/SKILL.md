@@ -1,12 +1,15 @@
 ---
 name: echo-shield-token-triage
-description: Use when a Bankr or agent user gives a Base token contract and wants the Echo Shield card only. Return just the direct launch-card PNG URL; do not summarize, deep scan, trade, fetch binary image bytes, or execute transactions unless explicitly asked.
-version: 1.2.1
+description: Use when a Bankr or agent user gives a Base token contract and wants only the Echo Shield launch-card URL. Build and return exactly one plain Card URL line; never explain PNG rendering, never use Markdown images, never output curl commands, and never leave Card blank.
+version: 2
 author: BuiltByEcho
 license: MIT
 tags: [echo-shield, base, token-safety, launch-card, bankr, card-only]
 visibility: public
 metadata:
+  clawdbot:
+    emoji: "🛡️"
+    homepage: "https://shield.builtbyecho.xyz"
   hermes:
     tags: [echo-shield, base, token-safety, agents, launch-card, card-only]
     related_skills: []
@@ -14,91 +17,72 @@ metadata:
 
 # Echo Shield Card Only
 
-## Overview
+## Purpose
 
-This skill exists for one narrow job: given a Base ERC-20 contract address, return the Echo Shield launch-card PNG URL and nothing else.
+Return the Echo Shield card URL only.
 
-Default behavior is **card only**. Do not perform a full token triage, do not explain the score, do not call deep-analysis, do not fetch or paste PNG bytes, and do not execute any transaction. The launch-card endpoint itself is the image URL.
+This skill is intentionally tiny because Bankr can hit step limits or drop URLs when the agent tries to analyze, download, or explain the image. The card endpoint is already the artifact.
 
-## Output Contract
+## Hard Output Contract
 
-For a valid address, respond with exactly one visible card line:
+For any valid Base contract address, output exactly one line:
 
 ```txt
 Card: https://shield.builtbyecho.xyz/api/launch-card?address=<ADDRESS>&format=png
 ```
 
-For Bankr and similar text terminals, always use the plain text `Card: <URL>` line. Do **not** use Markdown image syntax (`![alt](url)`) by default; some clients display a broken image icon or drop the URL when they cannot fetch/preview the image.
+No other text.
 
-Do not add score summaries, bullets, caveats, liquidity notes, holder notes, or buy/sell commentary unless the user explicitly asks for analysis after receiving the card.
+## If the User Asks “Why won’t the card show?”
+
+Do not explain terminal image rendering. Do not output `curl`. Do not output a blank `Card:` line.
+
+If a valid address is available in the current message or conversation context, return exactly:
+
+```txt
+Card: https://shield.builtbyecho.xyz/api/launch-card?address=<ADDRESS>&format=png
+```
+
+If no valid address is available, ask exactly:
+
+```txt
+Send the Base token contract address.
+```
 
 ## Address Rule
 
-Only accept Base token contract addresses matching:
+A valid address matches:
 
 ```txt
 ^0x[a-fA-F0-9]{40}$
 ```
 
-If the input is not a valid address, ask for the Base token contract address in one sentence.
+If multiple addresses are present, use the most recent one from the user.
 
 ## Workflow
 
-1. **Validate address.** Confirm the user provided one `0x` address with 40 hex characters. Completion: invalid input is rejected before any URL is returned.
-2. **Build URL locally.** Construct the deterministic URL: `https://shield.builtbyecho.xyz/api/launch-card?address=<ADDRESS>&format=png`. Completion: no scan/deep-analysis/API call is required for the default card-only answer.
-3. **Return only the card line.** Output exactly `Card: <URL>` and stop. Completion: no extra explanation or risk summary appears after the card line.
+1. Find the most recent valid `0x` address.
+2. If no address exists, return only: `Send the Base token contract address.`
+3. If an address exists, build the URL locally. Do not call `/api/scan`; do not call `/api/deep-analysis`; do not fetch the PNG bytes.
+4. Return only the `Card: <URL>` line.
 
-## Optional Scan-Specific URL
+## Forbidden Outputs
 
-Only if the user explicitly asks for a fresh scan-specific/cache-busted card URL, call:
-
-```txt
-GET https://shield.builtbyecho.xyz/api/scan?address=<ADDRESS>
-```
-
-Then return the first available field, in this order:
-
-1. `launchCardPng`
-2. `launchCardPngUrl`
-3. `cardUrl`
-4. `cardPngUrl`
-5. `card.cardUrl`
-
-If no field exists, fall back to:
+Never output any of these patterns:
 
 ```txt
-https://shield.builtbyecho.xyz/api/launch-card?address=<ADDRESS>&format=png
+Card:
 ```
 
-Even in this optional mode, return only:
+- any terminal/image-preview explanation
 
-```txt
-Card: <URL>
-```
-
-## Raw PNG Handling
-
-The PNG endpoint returns binary image data. That is correct. Do not fetch the PNG bytes in text-only chat. Do not paste byte output. Do not say the card URL is blank. The URL itself is the displayable artifact.
-
-If a user wants to download the file, provide only this command:
-
-```bash
-curl -L "https://shield.builtbyecho.xyz/api/launch-card?address=<ADDRESS>&format=png" --output echo-shield-card.png
-```
-
-## Do Not Do These
-
-- Do not call `/api/deep-analysis` for card-only requests.
-- Do not execute wallet transactions.
-- Do not look up token holder/liquidity/admin details unless explicitly asked after the card.
-- Do not return a long report.
-- Do not leave a blank `Card:` line.
-- Do not fetch the image bytes and describe terminal limitations unless the user asks why a terminal cannot render it.
+- an empty download command with no URL
+- Markdown image syntax
 
 ## Verification Checklist
 
-- [ ] Address is valid before returning a URL.
-- [ ] Default answer requires zero API/tool calls by the Bankr agent.
-- [ ] Output is exactly one `Card: <URL>` line for normal requests.
-- [ ] URL contains `format=png`.
-- [ ] No deep analysis, transaction, summary, or binary image bytes are returned.
+- [ ] Output is one line for a valid address.
+- [ ] Output starts with `Card: https://shield.builtbyecho.xyz/api/launch-card?address=`.
+- [ ] Output includes `&format=png`.
+- [ ] Output does not include explanations, Markdown image syntax, curl commands, scan summaries, or transactions.
+- [ ] Output never contains a blank `Card:` line.
